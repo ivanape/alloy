@@ -217,10 +217,19 @@ func (p *profilingLoop) push(jfrBytes []byte, startTime time.Time, endTime time.
 }
 
 func (p *profilingLoop) start() error {
+	argv := p.generateCommand()
+	stdout, stderr, err := p.profiler.Execute(argv)
+	if err != nil {
+		return fmt.Errorf("asprof failed to run: %w %s %s", err, stdout, stderr)
+	}
+	return nil
+}
+
+func (p *profilingLoop) generateCommand() []string {
 	cfg := p.getConfig()
 	p.startTime = time.Now()
 	p.sampleRate = cfg.SampleRate
-	argv := make([]string, 0, 14)
+	argv := make([]string, 0)
 	// asprof cli reference: https://github.com/async-profiler/async-profiler?tab=readme-ov-file#profiler-options
 	argv = append(argv,
 		"-f", p.jfrFile,
@@ -231,9 +240,7 @@ func (p *profilingLoop) start() error {
 		argv = append(argv, "--all")
 	}
 
-	if cfg.CPU {
-		argv = append(argv, "--itimer")
-	} else {
+	if cfg.CPU || cfg.All {
 		argv = append(argv, "-e", cfg.Event)
 		if cfg.PerThread {
 			argv = append(argv, "-t")
@@ -241,6 +248,7 @@ func (p *profilingLoop) start() error {
 		profilingInterval := time.Second.Nanoseconds() / int64(cfg.SampleRate)
 		argv = append(argv, "-i", strconv.FormatInt(profilingInterval, 10))
 	}
+
 	if cfg.Wall != "" {
 		argv = append(argv, "--wall", cfg.Wall)
 	}
@@ -268,7 +276,7 @@ func (p *profilingLoop) start() error {
 	if cfg.Proc != "" {
 		argv = append(argv, "--proc", cfg.Proc)
 	}
-	if cfg.TargetCPU >= 0 {
+	if cfg.TargetCPU > 0 {
 		argv = append(argv, "--target-cpu", strconv.Itoa(cfg.TargetCPU))
 	}
 	if cfg.RecordCPU {
@@ -336,11 +344,7 @@ func (p *profilingLoop) start() error {
 	)
 
 	_ = level.Debug(p.logger).Log("cmd", strings.Join(argv, " "))
-	stdout, stderr, err := p.profiler.Execute(argv)
-	if err != nil {
-		return fmt.Errorf("asprof failed to run: %w %s %s", err, stdout, stderr)
-	}
-	return nil
+	return argv
 }
 
 func (p *profilingLoop) getConfig() ProfilingConfig {
