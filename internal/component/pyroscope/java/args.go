@@ -35,7 +35,7 @@ type ProfilingConfig struct {
 	Begin      string `alloy:"begin,attr,optional"`
 	End        string `alloy:"end,attr,optional"`
 	NoStop     bool   `alloy:"nostop,attr,optional"`
-	Proc       string `alloy:"proc,attr,optional"` // --proc: Collect system process statistics interval
+	Proc       string `alloy:"proc,attr,optional"`
 	TargetCPU  int    `alloy:"target_cpu,attr,optional"`
 	RecordCPU  bool   `alloy:"record_cpu,attr,optional"`
 
